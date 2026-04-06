@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulador Distribuição de Valores - Diárias e Passagens 2026</title>
+  <style>
+    :root {
+      --editable-bg: #fff8e1;
+      --calculated-bg: #e8f5e9;
+      --error: #c62828;
+      --success: #2e7d32;
+      --primary: #1976d2;
+      --text: #212121;
+      --border: #bdbdbd;
+      --shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      line-height: 1.5;
+      color: var(--text);
+      background: #f5f5f5;
+      padding: 16px;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px;
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 16px;
+    }
+    header h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    header p { font-size: 0.95rem; opacity: 0.95; }
+    .legend {
+      display: flex; gap: 16px; font-size: 0.9rem; margin: 8px 0 16px;
+      flex-wrap: wrap;
+    }
+    .legend span { display: flex; align-items: center; gap: 6px; }
+    .legend .editable { background: var(--editable-bg); padding: 2px 8px; border-radius: 4px; }
+    .legend .calculated { background: var(--calculated-bg); padding: 2px 8px; border-radius: 4px; }
+    section {
+      background: white; border-radius: 8px; padding: 16px;
+      margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+    section h2 {
+      font-size: 1.15rem; margin-bottom: 12px; padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary); color: var(--primary);
+    }
+    .info { font-size: 0.9rem; color: #666; margin-bottom: 12px; }
+    table {
+      width: 100%; border-collapse: collapse; margin: 8px 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--border); padding: 8px 10px; text-align: left;
+    }
+    th { background: #f5f5f5; font-weight: 600; }
+    tfoot td { font-weight: 600; background: #fafafa; }
+    input[type="number"], input[type="text"] {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--border);
+      border-radius: 4px; font-size: 0.95rem;
+    }
+    input[type="number"]:focus, input[type="text"]:focus {
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(25,118,210,0.2);
+    }
+    .editable { background: var(--editable-bg); }
+    .calculated { background: var(--calculated-bg); font-weight: 500; pointer-events: none; }
+    .error-msg { color: var(--error); font-size: 0.85rem; margin-top: 4px; min-height: 1.2em; }
+    .success-msg { color: var(--success); font-size: 0.85rem; margin-top: 4px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+    .col { flex: 1; min-width: 200px; }
+    .btn {
+      background: var(--primary); color: white; border: none; padding: 10px 16px;
+      border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500;
+      transition: background 0.2s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:hover { background: #1565c0; }
+    .btn:disabled { background: #90a4ae; cursor: not-allowed; }
+    .btn-secondary { background: #757575; }
+    .btn-secondary:hover { background: #616161; }
+    .btn-danger { background: var(--error); }
+    .btn-danger:hover { background: #b71c1c; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .simulation-list { margin-top: 12px; }
+    .simulation-item {
+      background: #f9f9f9; border-left: 4px solid var(--primary);
+      padding: 10px 12px; margin: 6px 0; border-radius: 0 4px 4px 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .simulation-item button { margin-left: 8px; }
+    footer {
+      text-align: center; font-size: 0.85rem; color: #666;
+      padding: 16px; margin-top: 8px;
+    }
+    @media print {
+      body { background: white; padding: 0; max-width: none; }
+      .no-print { display: none !important; }
+      section { box-shadow: none; border: 1px solid #eee; }
+      input { border: none; background: transparent; padding: 0; }
+      .editable, .calculated { background: transparent !important; }
+      header { background: white; color: var(--text); border-bottom: 2px solid var(--primary); }
+    }
+    @media (max-width: 768px) {
+      body { padding: 8px; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 6px 8px; }
+      .row { flex-direction: column; }
+    }
+    [aria-live] { position: absolute; left: -9999px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💰 Simulador Distribuição de Valores</h1>
+    <p>Despesas com Diárias e Passagens 2026 • Ifes Campus Aracruz</p>
+  </header>
+
+  <div class="legend no-print">
+    <span>🟠 <strong class="editable">Laranja = editáveis</strong></span>
+    <span>🟢 <strong class="calculated">Verde = calculados automaticamente</strong></span>
+  </div>
+
+  <div class="info">
+    📐 <strong>Lógica:</strong> Item 1 define percentuais por tipo de viagem. 
+    O valor "DOCENTES" alimenta o Item 2 (rateio entre coordenadorias).<br/>
+    ✏️ Números de alunos e professores por coordenadoria são editáveis.
+  </div>
+
+  <!-- ITEM 1: Percentuais por Tipo de Viagem -->
+  <section id="item1">
+    <h2>1. Simulação - Percentuais por Tipo de Viagem</h2>
+    <p class="info">A soma dos percentuais deve ser igual a 100%.</p>
+    
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Tipo de Viagem</th>
+          <th scope="col">Percentual (%)</th>
+          <th scope="col">Valor Alocado (R$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Convocação</td>
+          <td><input type="number" class="editable perc-valor" id="perc-convocacao" step="0.01" min="0" max="100" value="0" aria-label="Percentual Convocação"></td>
+          <td class="calculated" id="val-convocacao">R$ 0,00</td>
+        </tr>
+        <tr>
+          <td>A Serviço</td>
+          <td><input type="number" class="editable perc-valor" id="perc-servico" step="0.01" min="0" max="100" value="0" aria-label="Percentual A Serviço"></td>
+          <td class="calculated" id="val-servico">R$ 0,00</td>
+        </tr>
+        <tr>
+          <td>Encontro/Seminário, congresso e treinamento ADM</td>
+          <td><input type="number" class="editable perc-valor" id="perc-adm" step="0.01" min="0" max="100" value="0" aria-label="Percentual ADM"></td>
+          <td class="calculated" id="val-adm">R$ 0,00</td>
+        </tr>
+        <tr>
+          <td>Encontro/Seminário, congresso e treinamento DOCENTES</td>
+          <td><input type="number" class="editable perc-valor" id="perc-docentes" step="0.01" min="0" max="100" value="0" aria-label="Percentual DOCENTES"></td>
+          <td class="calculated" id="val-docentes">R$ 0,00</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Valor Anual Total</strong></td>
+          <td>
+            <span id="soma-percentuais">Soma: 0%</span>
+            <div id="erro-soma" class="error-msg" role="alert" aria-live="polite"></div>
+          </td>
+          <td><strong id="total-geral">Total = R$ 0,00</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <!-- ITEM 2: Distribuição entre Coordenadorias -->
+  <section id="item2">
+    <h2>2. Distribuição entre Coordenadorias (base no valor DOCENTES)</h2>
+    
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Coordenadoria de Curso</th>
+          <th scope="col">Alunos (base)</th>
+          <th scope="col">Professores (base)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Técnico em Química</td>
+          <td><input type="number" class="editable base-alunos" data-curso="quimica-tec" value="242" min="0" aria-label="Alunos Técnico em Química"></td>
+          <td><input type="number" class="editable base-professores" data-curso="quimica-tec" value="15" min="0" aria-label="Professores Técnico em Química"></td>
+        </tr>
+        <tr>
+          <td>Técnico em Mecânica</td>
+          <td><input type="number" class="editable base-alunos" data-curso="mecanica-tec" value="296" min="0" aria-label="Alunos Técnico em Mecânica"></td>
+          <td><input type="number" class="editable base-professores" data-curso="mecanica-tec" value="15" min="0" aria-label="Professores Técnico em Mecânica"></td>
+        </tr>
+        <tr>
+          <td>Engenharia Mecânica</td>
+          <td><input type="number" class="editable base-alunos" data-curso="mecanica-eng" value="169" min="0" aria-label="Alunos Engenharia Mecânica"></td>
+          <td><input type="number" class="editable base-professores" data-curso="mecanica-eng" value="14" min="0" aria-label="Professores Engenharia Mecânica"></td>
+        </tr>
+        <tr>
+          <td>Química Industrial</td>
+          <td><input type="number" class="editable base-alunos" data-curso="quimica-ind" value="76" min="0" aria-label="Alunos Química Industrial"></td>
+          <td><input type="number" class="editable base-professores" data-curso="quimica-ind" value="10" min="0" aria-label="Professores Química Industrial"></td>
+        </tr>
+        <tr>
+          <td>Licenciatura em Química</td>
+          <td><input type="number" class="editable base-alunos" data-curso="quimica-lic" value="59" min="0" aria-label="Alunos Licenciatura em Química"></td>
+          <td><input type="number" class="editable base-professores" data-curso="quimica-lic" value="13" min="0" aria-label="Professores Licenciatura em Química"></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Total</strong></td>
+          <td class="calculated" id="total-alunos">842</td>
+          <td class="calculated" id="total-professores">67</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <p class="info">Observação: Números de alunos e professores por coordenadoria podem ser editados livremente.</p>
+
+    <div style="margin: 16px 0;">
+      <strong>Critérios de Rateio (% do valor DOCENTES)</strong>
+      <div class="row">
+        <div class="col">
+          <label for="rateio-igualitario">Igualitário: </label>
+          <input type="number" id="rateio-igualitario" class="editable perc-rateio" step="0.01" min="0" max="100" value="33.33" aria-label="Percentual rateio igualitário">
+        </div>
+        <div class="col">
+          <label for="rateio-alunos">Por Alunos: </label>
+          <input type="number" id="rateio-alunos" class="editable perc-rateio" step="0.01" min="0" max="100" value="33.33" aria-label="Percentual rateio por alunos">
+        </div>
+        <div class="col">
+          <label for="rateio-professores">Por Professores: </label>
+          <input type="number" id="rateio-professores" class="editable perc-rateio" step="0.01" min="0" max="100" value="33.34" aria-label="Percentual rateio por professores">
+        </div>
+      </div>
+      <div id="erro-rateio" class="error-msg" role="alert" aria-live="polite"></div>
+      <div class="info">Valor base: <strong id="valor-base-docentes">R$ 0,00</strong> (valor "DOCENTES" do Item 1)</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Coordenadoria</th>
+          <th scope="col">Alunos</th>
+          <th scope="col">Professores</th>
+          <th scope="col">Igualitário</th>
+          <th scope="col">Por Alunos</th>
+          <th scope="col">Por Professores</th>
+          <th scope="col">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody id="tabela-rateio">
+        <!-- Preenchido via JS -->
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><strong>VALORES TOTAIS</strong></td>
+          <td class="calculated" id="rateio-total-alunos">-</td>
+          <td class="calculated" id="rateio-total-professores">-</td>
+          <td class="calculated" id="rateio-total-igualitario">R$ 0,00</td>
+          <td class="calculated" id="rateio-total-alunos-val">R$ 0,00</td>
+          <td class="calculated" id="rateio-total-professores-val">R$ 0,00</td>
+          <td class="calculated" id="rateio-total-geral">R$ 0,00</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div id="verificacao" class="success-msg" role="status" aria-live="polite" style="margin-top:8px;"></div>
+  </section>
+
+  <!-- ITEM 3: Simulações Registradas -->
+  <section id="item3" class="no-print">
+    <h2>3. Simulações Registradas</h2>
+    <div class="actions">
+      <button class="btn" id="btn-salvar">💾 Salvar Simulação Atual</button>
+      <button class="btn btn-secondary" id="btn-limpar">🗑️ Limpar Todas</button>
+      <button class="btn btn-secondary no-print" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <div class="simulation-list" id="lista-simulacoes">
+      <p class="info">Nenhuma simulação salva. Clique em "Salvar Simulação" para registrar cenários.</p>
+    </div>
+  </section>
+
+  <footer>
+    Desenvolvido por Cleiton Mateini Madeira / Diretoria de Administração e Planejamento - Ifes Campus Aracruz<br/>
+    Formato A4 vertical • Campos editáveis nos Itens 1 e 2 • Simulações salvas aparecem na impressão
+  </footer>
+
+  <div aria-live="polite" id="anuncio" style="position:absolute;left:-9999px;"></div>
+
+  <script>
+    // ===== UTILITÁRIOS =====
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtPct = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2 });
+    
+    const debounce = (fn, delay = 300) => {
+      let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
+    };
+
+    // ===== ESTADO GLOBAL =====
+    const state = {
+      totalAnual: 80000,
+      perc: { convocacao: 0, servico: 0, adm: 0, docentes: 0 },
+      cursos: [
+        { id: 'quimica-tec', nome: 'Técnico em Química', alunos: 242, professores: 15 },
+        { id: 'mecanica-tec', nome: 'Técnico em Mecânica', alunos: 296, professores: 15 },
+        { id: 'mecanica-eng', nome: 'Engenharia Mecânica', alunos: 169, professores: 14 },
+        { id: 'quimica-ind', nome: 'Química Industrial', alunos: 76, professores: 10 },
+        { id: 'quimica-lic', nome: 'Licenciatura em Química', alunos: 59, professores: 13 }
+      ],
+      rateio: { igualitario: 33.33, porAlunos: 33.33, porProfessores: 33.34 }
+    };
+
+    // ===== VALIDAÇÃO E CÁLCULO =====
+    function validarSoma100(valores, elErro) {
+      const soma = valores.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+      const valido = Math.abs(soma - 100) < 0.01;
+      if (elErro) {
+        elErro.textContent = valido ? '✅ Soma: 100%' : `⚠️ Soma: ${soma.toFixed(2)}% (deve ser 100%)`;
+        elErro.className = valido ? 'success-msg' : 'error-msg';
+      }
+      return { valido, soma };
+    }
+
+    function calcularValoresItem1() {
+      const inputs = document.querySelectorAll('.perc-valor');
+      const valores = Array.from(inputs).map(i => parseFloat(i.value) || 0);
+      const { valido } = validarSoma100(valores, document.getElementById('erro-soma'));
+      
+      state.perc = {
+        convocacao: parseFloat(document.getElementById('perc-convocacao').value) || 0,
+        servico: parseFloat(document.getElementById('perc-servico').value) || 0,
+        adm: parseFloat(document.getElementById('perc-adm').value) || 0,
+        docentes: parseFloat(document.getElementById('perc-docentes').value) || 0
+      };
+
+      document.getElementById('soma-percentuais').textContent = `Soma: ${valores.reduce((a,b)=>a+b,0).toFixed(2)}%`;
+      document.getElementById('total-geral').textContent = `Total = ${fmtBRL.format(state.totalAnual)}`;
+      
+      document.getElementById('val-convocacao').textContent = fmtBRL.format(state.totalAnual * state.perc.convocacao / 100);
+      document.getElementById('val-servico').textContent = fmtBRL.format(state.totalAnual * state.perc.servico / 100);
+      document.getElementById('val-adm').textContent = fmtBRL.format(state.totalAnual * state.perc.adm / 100);
+      const valDocentes = state.totalAnual * state.perc.docentes / 100;
+      document.getElementById('val-docentes').textContent = fmtBRL.format(valDocentes);
+      document.getElementById('valor-base-docentes').textContent = fmtBRL.format(valDocentes);
+      
+      document.getElementById('btn-salvar').disabled = !valido;
+      calcularRateio();
+    }
+
+    function atualizarTotaisBases() {
+      const alunos = Array.from(document.querySelectorAll('.base-alunos')).reduce((s, i) => s + (parseInt(i.value)||0), 0);
+      const profs = Array.from(document.querySelectorAll('.base-professores')).reduce((s, i) => s + (parseInt(i.value)||0), 0);
+      document.getElementById('total-alunos').textContent = alunos;
+      document.getElementById('total-professores').textContent = profs;
+      
+      state.cursos.forEach(curso => {
+        curso.alunos = parseInt(document.querySelector(`.base-alunos[data-curso="${curso.id}"]`)?.value) || 0;
+        curso.professores = parseInt(document.querySelector(`.base-professores[data-curso="${curso.id}"]`)?.value) || 0;
+      });
+      calcularRateio();
+    }
+
+    function calcularRateio() {
+      const valorDocentes = state.totalAnual * state.perc.docentes / 100;
+      const { valido } = validarSoma100(
+        [state.rateio.igualitario, state.rateio.porAlunos, state.rateio.porProfessores],
+        document.getElementById('erro-rateio')
+      );
+      
+      const totalAlunos = state.cursos.reduce((s,c)=>s+c.alunos,0);
+      const totalProfs = state.cursos.reduce((s,c)=>s+c.professores,0);
+      const tbody = document.getElementById('tabela-rateio');
+      tbody.innerHTML = '';
+      
+      let somaIgual = 0, somaAlunos = 0, somaProfs = 0, somaTotal = 0;
+      
+      state.cursos.forEach(curso => {
+        const igual = (valorDocentes * state.rateio.igualitario / 100) / state.cursos.length;
+        const porAluno = totalAlunos > 0 ? (valorDocentes * state.rateio.porAlunos / 100) * (curso.alunos / totalAlunos) : 0;
+        const porProf = totalProfs > 0 ? (valorDocentes * state.rateio.porProfessores / 100) * (curso.professores / totalProfs) : 0;
+        const total = igual + porAluno + porProf;
+        
+        somaIgual += igual; somaAlunos += porAluno; somaProfs += porProf; somaTotal += total;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${curso.nome}</td>
+          <td class="calculated">${curso.alunos}</td>
+          <td class="calculated">${curso.professores}</td>
+          <td class="calculated">${fmtBRL.format(igual)}</td>
+          <td class="calculated">${fmtBRL.format(porAluno)}</td>
+          <td class="calculated">${fmtBRL.format(porProf)}</td>
+          <td class="calculated"><strong>${fmtBRL.format(total)}</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      document.getElementById('rateio-total-igualitario').textContent = fmtBRL.format(somaIgual);
+      document.getElementById('rateio-total-alunos-val').textContent = fmtBRL.format(somaAlunos);
+      document.getElementById('rateio-total-professores-val').textContent = fmtBRL.format(somaProfs);
+      document.getElementById('rateio-total-geral').textContent = fmtBRL.format(somaTotal);
+      
+      const verificacao = document.getElementById('verificacao');
+      if (Math.abs(somaTotal - valorDocentes) < 0.01 && valido) {
+        verificacao.textContent = `✅ Verificação: Total distribuído (${fmtBRL.format(somaTotal)}) = Valor DOCENTES (${fmtBRL.format(valorDocentes)})`;
+        verificacao.className = 'success-msg';
+      } else {
+        verificacao.textContent = `⚠️ Divergência: Distribuído ${fmtBRL.format(somaTotal)} ≠ DOCENTES ${fmtBRL.format(valorDocentes)}`;
+        verificacao.className = 'error-msg';
+      }
+    }
+
+    // ===== PERSISTÊNCIA =====
+    function salvarSimulacao() {
+      try {
+        const dados = {
+          data: new Date().toLocaleString('pt-BR'),
+          perc: {...state.perc},
+          cursos: state.cursos.map(c => ({...c})),
+          rateio: {...state.rateio},
+          totalAnual: state.totalAnual
+        };
+        const chave = 'simulador_' + Date.now();
+        localStorage.setItem(chave, JSON.stringify(dados));
+        atualizarListaSimulacoes();
+        document.getElementById('anuncio').textContent = 'Simulação salva com sucesso!';
+      } catch(e) {
+        alert('Erro ao salvar: ' + e.message);
+      }
+    }
+
+    function carregarSimulacao(chave) {
+      try {
+        const dados = JSON.parse(localStorage.getItem(chave));
+        if (!dados) return;
+        
+        document.getElementById('perc-convocacao').value = dados.perc.convocacao;
+        document.getElementById('perc-servico').value = dados.perc.servico;
+        document.getElementById('perc-adm').value = dados.perc.adm;
+        document.getElementById('perc-docentes').value = dados.perc.docentes;
+        
+        dados.cursos.forEach(c => {
+          const elAlunos = document.querySelector(`.base-alunos[data-curso="${c.id}"]`);
+          const elProfs = document.querySelector(`.base-professores[data-curso="${c.id}"]`);
+          if (elAlunos) elAlunos.value = c.alunos;
+          if (elProfs) elProfs.value = c.professores;
+        });
+        
+        document.getElementById('rateio-igualitario').value = dados.rateio.igualitario;
+        document.getElementById('rateio-alunos').value = dados.rateio.porAlunos;
+        document.getElementById('rateio-professores').value = dados.rateio.porProfessores;
+        
+        state.perc = {...dados.perc};
+        state.cursos = dados.cursos.map(c => ({...c}));
+        state.rateio = {...dados.rateio};
+        state.totalAnual = dados.totalAnual || 80000;
+        
+        atualizarTotaisBases();
+        calcularValoresItem1();
+        document.getElementById('anuncio').textContent = 'Simulação carregada!';
+      } catch(e) { console.error(e); }
+    }
+
+    function atualizarListaSimulacoes() {
+      const lista = document.getElementById('lista-simulacoes');
+      const chaves = Object.keys(localStorage).filter(k => k.startsWith('simulador_'));
+      
+      if (chaves.length === 0) {
+        lista.innerHTML = '<p class="info">Nenhuma simulação salva. Clique em "Salvar Simulação" para registrar cenários.</p>';
+        return;
+      }
+      
+      lista.innerHTML = '';
+      chaves.sort().reverse().forEach(chave => {
+        try {
+          const dados = JSON.parse(localStorage.getItem(chave));
+          const div = document.createElement('div');
+          div.className = 'simulation-item';
+          div.innerHTML = `
+            <span><strong>${dados.data}</strong> • DOCENTES: ${fmtBRL.format(state.totalAnual * dados.perc.docentes / 100)}</span>
+            <div>
+              <button class="btn btn-secondary" onclick="carregarSimulacao('${chave}')">Carregar</button>
+              <button class="btn btn-danger" onclick="excluirSimulacao('${chave}')">Excluir</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        } catch(e) {}
+      });
+    }
+
+    function excluirSimulacao(chave) {
+      if (confirm('Excluir esta simulação?')) {
+        localStorage.removeItem(chave);
+        atualizarListaSimulacoes();
+        document.getElementById('anuncio').textContent = 'Simulação excluída.';
+      }
+    }
+
+    function limparTodas() {
+      if (confirm('Tem certeza? Isso apagará TODAS as simulações salvas.')) {
+        Object.keys(localStorage).filter(k => k.startsWith('simulador_')).forEach(k => localStorage.removeItem(k));
+        atualizarListaSimulacoes();
+        document.getElementById('anuncio').textContent = 'Todas as simulações foram excluídas.';
+      }
+    }
+
+    // ===== EVENTOS =====
+    function setupEventos() {
+      document.querySelectorAll('.perc-valor').forEach(el => {
+        el.addEventListener('input', debounce(calcularValoresItem1, 200));
+      });
+      
+      document.querySelectorAll('.base-alunos, .base-professores').forEach(el => {
+        el.addEventListener('input', debounce(atualizarTotaisBases, 200));
+      });
+      
+      document.querySelectorAll('.perc-rateio').forEach(el => {
+        el.addEventListener('input', () => {
+          state.rateio = {
+            igualitario: parseFloat(document.getElementById('rateio-igualitario').value) || 0,
+            porAlunos: parseFloat(document.getElementById('rateio-alunos').value) || 0,
+            porProfessores: parseFloat(document.getElementById('rateio-professores').value) || 0
+          };
+          calcularRateio();
+        });
+      });
+      
+      document.getElementById('btn-salvar').addEventListener('click', salvarSimulacao);
+      document.getElementById('btn-limpar').addEventListener('click', limparTodas);
+      
+      // Inicialização
+      calcularValoresItem1();
+      atualizarListaSimulacoes();
+    }
+
+    // ===== INICIALIZAÇÃO =====
+    document.addEventListener('DOMContentLoaded', setupEventos);
+  </script>
+</body>
+</html>
